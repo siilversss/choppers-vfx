@@ -181,9 +181,9 @@ save("splat_decal", np.clip(alpha, 0, 1), shade=np.clip(0.55 + nz * 0.45 - r * 0
 # rune ring: two rings with procedural glyphs between them
 img = Image.new("L", (N, N), 0); d = ImageDraw.Draw(img)
 c = N / 2
-for rad, w in ((0.94, 3), (0.74, 2), (0.70, 1)):
+for rad, w in ((0.93, 9), (0.73, 6), (0.66, 3)):
     d.ellipse([c - rad * c, c - rad * c, c + rad * c, c + rad * c], outline=255, width=w)
-glyphs = 22
+glyphs = 16
 for g in range(glyphs):
     ang = g / glyphs * 2 * math.pi
     gx, gy = c + math.cos(ang) * 0.84 * c, c + math.sin(ang) * 0.84 * c
@@ -194,11 +194,11 @@ for g in range(glyphs):
     strokes = rr.integers(2, 4)
     for s_ in range(strokes):
         u0, v0, u1, v1 = rr.uniform(-9, 9, 4)
-        d.line([P(u0, v0), P(u1, v1)], fill=255, width=2)
+        d.line([P(u0 * 1.5, v0 * 1.4), P(u1 * 1.5, v1 * 1.4)], fill=255, width=6)
     if rr.random() < 0.5:
-        d.ellipse([P(-3, -3)[0] - 3, P(-3, -3)[1] - 3, P(-3, -3)[0] + 3, P(-3, -3)[1] + 3], outline=255, width=2)
-ring = np.asarray(img.filter(ImageFilter.GaussianBlur(0.8)), np.float32) / 255
-glow = np.asarray(img.filter(ImageFilter.GaussianBlur(6)), np.float32) / 255
+        d.ellipse([P(-4, -4)[0] - 6, P(-4, -4)[1] - 6, P(-4, -4)[0] + 6, P(-4, -4)[1] + 6], outline=255, width=5)
+ring = np.asarray(img.filter(ImageFilter.GaussianBlur(1.2)), np.float32) / 255
+glow = np.asarray(img.filter(ImageFilter.GaussianBlur(10)), np.float32) / 255
 save("rune_ring", np.clip(ring * 1.3 + glow * 0.6, 0, 1))
 
 # ripple: thin water ring with a soft inner sheen

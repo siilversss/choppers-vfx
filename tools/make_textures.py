@@ -130,17 +130,24 @@ save("ground_cracks", np.clip(c * 1.4 + glow * 0.8, 0, 1) * np.clip(1.15 - r, 0,
 # 10) fire/energy burst flipbook, 4x4 frames of 256px (1024x1024), for ParticleEmitter FlipbookLayout Grid4x4
 F, n = 16, 256
 sheet = np.zeros((n * 4, n * 4), np.float32)
+shade_sheet = np.ones((n * 4, n * 4), np.float32)
 dx, dy, r, a = grid(n)
 base_noise = [fbm(n, 5, 20 + i) for i in range(3)]
 for f in range(F):
     t = f / (F - 1)
-    radius = 0.35 + 0.6 * t ** 0.5                 # grows to fill the frame
-    turb = base_noise[0] * 0.65 + base_noise[1] * 0.35
-    warped = r * (1 + (turb - 0.5) * (0.6 + 0.6 * t))  # lumpy billowing edge
-    body = np.clip(1 - (warped / radius) ** 2.5, 0, 1)
-    hollow = np.clip((warped / radius) * 1.2 - t * 0.9, 0, 1) if t > 0.35 else 1.0  # burns out from the middle
-    v = body * (1.15 - t) * hollow
-    v *= np.clip((base_noise[2] + 0.55 - t * 0.75) * 1.6, 0, 1)   # breaks up into wisps at the end
+    radius = 0.38 + 0.57 * t ** 0.5                 # grows to fill the frame
+    # each frame samples the noise at a drifting offset so the billows churn instead of just scaling
+    sh = int(t * 40)
+    n0 = np.roll(base_noise[0], (sh, -sh), (0, 1)); n1 = np.roll(base_noise[1], (-sh * 2, sh), (0, 1))
+    turb = n0 * 0.6 + n1 * 0.4
+    warped = r * (1 + (turb - 0.5) * (0.9 + 0.5 * t))  # lumpy, billowing silhouette from frame 1
+    body = np.clip(1 - (warped / radius) ** 2, 0, 1) ** 0.6
+    # volumetric shading: bright churning lobes, darker creases
+    shade = np.clip(0.45 + (turb - 0.5) * 2.2 + (1 - r / max(radius, 0.01)) * 0.35, 0.15, 1)
+    hollow = np.clip((warped / radius) * 1.3 - (t - 0.3) * 1.4, 0, 1) if t > 0.3 else 1.0  # burns out from the middle
+    v = np.clip(body * 1.6, 0, 1) * (1.15 - t * 0.8) * hollow
+    v *= np.clip((base_noise[2] + 0.6 - t * 0.8) * 1.7, 0, 1)   # breaks up into wisps at the end
     gx, gy = f % 4, f // 4
     sheet[gy * n:(gy + 1) * n, gx * n:(gx + 1) * n] = np.clip(v, 0, 1) * (r < 1)
-save("burst_flipbook4x4", sheet)
+    shade_sheet[gy * n:(gy + 1) * n, gx * n:(gx + 1) * n] = shade * (1 - 0.35 * t)
+save("burst_flipbook4x4", sheet, rgb=np.dstack([shade_sheet] * 3))

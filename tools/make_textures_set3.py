@@ -242,3 +242,36 @@ save("light_rays", np.clip(rays + np.exp(-(r / 0.18) ** 2), 0, 1))
 
 # ember: soft hot dot (tiny core, wide falloff)
 save("ember", np.clip(np.exp(-(r / 0.12) ** 2) + 0.45 * np.exp(-(r / 0.45) ** 2), 0, 1))
+
+# ---------------------------------------------------------------- bold bolt strips for Beams (along X), 4 variants stacked? no: one per file
+def bolt_strip(name, seed, jag=13, core=4.0):
+    W, H = 512, 128
+    rr = np.random.default_rng(seed)
+    img = Image.new("L", (W, H), 0); d = ImageDraw.Draw(img)
+    n = 18
+    ys = np.cumsum(rr.normal(0, jag, n + 1)); ys -= np.linspace(ys[0], ys[-1], n + 1)
+    ys = np.clip(ys, -H * 0.36, H * 0.36) + H / 2
+    xs = np.linspace(0, W, n + 1)
+    pts = list(zip(xs, ys))
+    d.line(pts, fill=255, width=int(core), joint="curve")
+    for k in range(5):  # forks
+        i = rr.integers(2, n - 2)
+        x0, y0 = pts[i]
+        ang = rr.uniform(-1.0, 1.0)
+        L = rr.uniform(30, 70)
+        fork = [(x0, y0)]
+        for s in range(4):
+            x0 += L / 4; y0 += math.sin(ang) * L / 4 + rr.normal(0, 4)
+            fork.append((x0, y0))
+        d.line(fork, fill=200, width=max(1, int(core * 0.5)))
+    c = np.asarray(img.filter(ImageFilter.GaussianBlur(0.8)), np.float32) / 255
+    g = np.asarray(img.filter(ImageFilter.GaussianBlur(7)), np.float32) / 255
+    save(name, np.clip(c * 1.2 + g * 1.4, 0, 1), shade=np.clip(0.7 + c * 0.3, 0, 1))
+bolt_strip("bolt_bold", 41)
+
+# ---------------------------------------------------------------- light column for Beams: solid core with soft edges (across Y)
+W, H = 256, 128
+y = (np.arange(H)[:, None] - H / 2) / (H / 2)
+col = np.clip(1 - np.abs(y) / 0.55, 0, 1) ** 0.6 + 0.5 * np.exp(-(y / 0.85) ** 2)
+streak = 0.85 + 0.15 * noise(256, 3, 77)[:H, :W]
+save("light_column", np.clip(col * streak, 0, 1) * np.ones((1, W)))

@@ -151,3 +151,59 @@ for f in range(F):
     sheet[gy * n:(gy + 1) * n, gx * n:(gx + 1) * n] = np.clip(v, 0, 1) * (r < 1)
     shade_sheet[gy * n:(gy + 1) * n, gx * n:(gx + 1) * n] = shade * (1 - 0.35 * t)
 save("burst_flipbook4x4", sheet, rgb=np.dstack([shade_sheet] * 3))
+
+# ---------------------------------------------------------------- set 2
+# 11) razor-thin slash: a single hairline arc with a hot leading head
+dx, dy, r, a = grid(N)
+u = (a + np.pi * 0.95) / (np.pi * 1.3)
+inside = (u > 0) & (u < 1)
+span = np.clip(u, 0, 1)
+d = r - 0.86
+w = 0.006 + 0.03 * span ** 2
+line = np.exp(-(d / w) ** 2) + 0.35 * np.exp(-(d / (w * 4)) ** 2)
+save("slash_thin", np.where(inside, line * np.clip(span * 1.6, 0, 1) * np.clip((1 - span) * 10, 0, 1), 0))
+
+# 12) double slash: two stacked crescents (outer bold, inner thinner) for heavy weapons
+def crescent(edge_r, thick_k, bright):
+    thick = np.sin(span * np.pi) ** 0.7 * thick_k + 0.004
+    d_out = r - edge_r
+    body = np.where(d_out < 0, np.clip(1 + d_out / thick, 0, 1) ** 1.6, 0)
+    edge = np.exp(-(d_out / 0.011) ** 2)
+    return (body * 0.9 + edge * 1.2) * bright
+dbl = crescent(0.88, 0.17, 1.0) + crescent(0.64, 0.12, 0.8)
+save("slash_double", np.where(inside, dbl * np.clip(span * 2.5, 0, 1) * np.clip((1 - span) * 6, 0, 1), 0))
+
+# 13) magic circle: rings, runic ticks, a hexagram
+dx, dy, r, a = grid(N)
+mc = np.exp(-((r - 0.93) / 0.012) ** 2) + np.exp(-((r - 0.82) / 0.008) ** 2) + 0.8 * np.exp(-((r - 0.45) / 0.008) ** 2)
+ticks = (np.abs(np.sin(a * 24)) > 0.92) & (r > 0.83) & (r < 0.92)
+mc += ticks * 0.9
+glyph = ((np.sin(a * 9 + 1.3) > 0.55) & (np.abs(np.sin(r * 60)) > 0.6)) & (r > 0.84) & (r < 0.91)
+mc += glyph * 0.0
+def segline(p1, p2, w=0.01):
+    p1, p2 = np.array(p1), np.array(p2)
+    v = p2 - p1; L2 = (v ** 2).sum()
+    t = np.clip(((dx - p1[0]) * v[0] + (dy - p1[1]) * v[1]) / L2, 0, 1)
+    px, py = p1[0] + t * v[0], p1[1] + t * v[1]
+    return np.exp(-(((dx - px) ** 2 + (dy - py) ** 2) / w ** 2))
+pts = [(0.8 * math.cos(math.pi / 2 + k * 2 * math.pi / 6), -0.8 * math.sin(math.pi / 2 + k * 2 * math.pi / 6)) for k in range(6)]
+for k in range(6):
+    mc += 0.9 * segline(pts[k], pts[(k + 2) % 6], 0.008)
+save("magic_circle", np.clip(mc, 0, 1) * (r < 0.97))
+
+# 14) dashed ring: segmented energy ring
+dashes = (np.sin(a * 16) > -0.2).astype(np.float32)
+save("ring_dashed", np.exp(-((r - 0.88) / 0.035) ** 2) * dashes + 0.25 * np.exp(-((r - 0.88) / 0.12) ** 2))
+
+# 15) anamorphic flare streak (wide horizontal lens streak + core)
+W, H = 512, 128
+yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+nx, ny = (xx - W / 2) / (W / 2), (yy - H / 2) / (H / 2)
+streak = np.exp(-(ny / 0.06) ** 2) * np.clip(1 - np.abs(nx), 0, 1) ** 1.5 + np.exp(-((nx * 4) ** 2 + (ny / 0.5) ** 2) * 3)
+save("flare_streak", np.clip(streak, 0, 1))
+
+# 16) swirl: spiral vortex arms
+dx, dy, r, a = grid(N)
+arms = np.cos(3 * a - r * 9) * 0.5 + 0.5
+sw = arms ** 3 * np.clip(1 - r, 0, 1) ** 0.8 * np.clip(r * 4, 0, 1)
+save("swirl", np.clip(sw * 1.3, 0, 1))
